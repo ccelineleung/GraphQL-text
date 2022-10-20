@@ -9,8 +9,13 @@ const typeDefs = gql`
 
   type User {
     id: ID!
-    username: String!
+    username: String
+    firstLetterOfUsername: FirstLetterOfUsername
+  }
+
+  type FirstLetterOfUsername {
     firstLetterOfUsername: String!
+    secondLetterOfUsername: String!
   }
 
   type Error {
@@ -18,7 +23,7 @@ const typeDefs = gql`
     message: String!
   }
 
-  type registerResponse {
+  type RegisterResponse {
     errors: [Error!]!
     user: User
   }
@@ -33,7 +38,7 @@ const typeDefs = gql`
     age: Int
   }
   type Mutation {
-    register(userInfo: UserInfo!): registerResponse!
+    register(userInfo: UserInfo!): RegisterResponse!
     login(userInfo: UserInfo!): String!
   }
 
@@ -50,9 +55,12 @@ const resolvers = {
   //       subscribe: (_, __, { pubsub }) => pubsub.asyncIterator(NEW_USER),
   //     },
   //   },
-  User: {
+  FirstLetterOfUsername: {
     firstLetterOfUsername: (parent) => {
       return parent.username[0];
+    },
+    secondLetterOfUsername: (parent) => {
+      return parent.username[1];
     },
     // username: (parent) => {
     //   // console.log(parent);
@@ -63,28 +71,34 @@ const resolvers = {
     hello: (parent, { name }) => {
       return `hey ${name}`;
     },
-    user: () => ({
-      id: 1,
-      username: 'tom',
-    }),
+    user: () => (
+      {
+        id: 1,
+        username: 'tom',
+      },
+      {
+        id: 2,
+        username: 'Jimmy',
+      }
+    ),
   },
   Mutation: {
-    login: async (parent, { userInfo: { username } }, context, info) => {
+    login: async (parent, { userInfo: { username } }, context) => {
       // context.res.cookie('')
       //check the password
       //await checkPassword(password)
       console.log(context);
       return username;
     },
-    register: (_, { userInfo: { username } }, { pubsub }) => {
+    register: (_, { userInfo: { username } }) => {
       const user = {
         id: 1,
         username,
       };
 
-      pubsub.publish(NEW_USER, {
-        newUser: user,
-      });
+      // pubsub.publish(NEW_USER, {
+      //   newUser: user,
+      // });
       return {
         errors: [
           {
@@ -107,7 +121,7 @@ const resolvers = {
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  validationRules: [depthLimit(2)],
+  validationRules: [depthLimit(1)],
   context: ({ req, res }) => ({ req, res }),
 });
 

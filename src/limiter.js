@@ -30,15 +30,19 @@ function arrify(value) {
   return [value];
 }
 
-const depthLimit =
-  (maxDepth, options = {}, callback = () => {}) =>
-  (validationContext) => {
+const depthLimit = (maxDepth, options = {}, callback = () => {}) => {
+  return function (validationContext) {
     try {
       const { definitions } = validationContext.getDocument();
-      console.log(`111111111111111`, validationContext.getDocument(),`3333333333333`);
-      const fragments = getFragments(definitions);
+
+      //return all Kind.FRAGMENT_DEFINITION
+      const fragments = getFragments(definitions); 
+      //return all Kind.OPERATION_DEFINITION
       const queries = getQueriesAndMutations(definitions);
       const queryDepths = {};
+
+      //   console.log(queries);
+
       for (let name in queries) {
         queryDepths[name] = determineDepth(
           queries[name],
@@ -50,43 +54,73 @@ const depthLimit =
           options
         );
       }
-      callback(queryDepths);
+
+      console.log(queries);
+      console.log('------------------queryDepths');
+      console.log(queryDepths);
+      //   callback(queryDepths);
+
+      //   console.log(`FINAL ANSWERSSSSSS `,validationContext,`end`)
       return validationContext;
     } catch (err) {
       console.error(err);
       throw err;
     }
   };
+};
 
 module.exports = depthLimit;
 
+//GET ALL FRAGMENTS FROM THE QUERIES
 function getFragments(definitions) {
+  //   console.log(`getFragments1111111111111122`, definitions, `end`);
   return definitions.reduce((map, definition) => {
+    // console.log('-----------------------------');
+    // console.log(definition);
+    // console.log(`KKKKIIIIINNNNNDNDDDDD1112`, Kind.FRAGMENT_DEFINITION, 'end');
     if (definition.kind === Kind.FRAGMENT_DEFINITION) {
+      // console.log('`````definition.name.value``````',definition.name.value,"end")
       map[definition.name.value] = definition;
     }
+    // console.log(`MMMMAAAAPPP222`, map, `END`);
     return map;
   }, {});
 }
 
-// this will actually get both queries and mutations. we can basically treat those the same
+//GET ALL OPERATION_DEFINITION INCULDING BOTH QUERIES AND MUTATIONS
 function getQueriesAndMutations(definitions) {
   return definitions.reduce((map, definition) => {
     if (definition.kind === Kind.OPERATION_DEFINITION) {
       map[definition.name ? definition.name.value : ''] = definition;
     }
+    // console.log(`*****************map`, map);
     return map;
   }, {});
 }
 
 function determineDepth(
   node,
-  fragments,
-  depthSoFar,
-  maxDepth,
-  context,
-  operationName,
-  options
+  //IntrospectionQuery  {
+  //     kind: 'OperationDefinition',
+  //     operation: 'query',
+  //     name: { kind: 'Name', value: 'IntrospectionQuery', loc: [Location] },
+  //     variableDefinitions: [],
+  //     directives: [],
+  //     selectionSet: { kind: 'SelectionSet', selections: [Array], loc: [Location] },
+  //     loc: Location {
+  //       start: 5,
+  //       end: 389,
+  //       startToken: [Token],
+  //       endToken: [Token],
+  //       source: [Source]
+  //     }
+
+  fragments, //FRAGMENT_DEFINITION
+  depthSoFar, //0
+  maxDepth, // 2
+  context, //validationContext
+  operationName, //IntrospectionQuery
+  options // {}
 ) {
   if (depthSoFar > maxDepth) {
     return context.reportError(
@@ -96,6 +130,8 @@ function determineDepth(
       )
     );
   }
+
+  console.log('******** Determine Depth');
 
   switch (node.kind) {
     case Kind.FIELD:
@@ -155,6 +191,7 @@ function determineDepth(
 
 function seeIfIgnored(node, ignore) {
   for (let rule of arrify(ignore)) {
+
     const fieldName = node.name.value;
     switch (rule.constructor) {
       case Function:
